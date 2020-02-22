@@ -83,16 +83,19 @@ fn main() -> Result<(), Fin> {
         token,
         match proxy {
             Some(proxy) => reqwest::Client::builder()
-                .proxy(
-                    reqwest::Proxy::https(proxy)
-                        .map_err(|e| Fin(
-                            format!("Error creating reqwest::Proxy: {:?}", e)
-                        ))?
-                )
+                .proxy(reqwest::Proxy::https(proxy).map_err(|e| {
+                    Fin(format!(
+                        "Error creating reqwest::Proxy: {:?}",
+                        e
+                    ))
+                })?)
                 .build()
-                .map_err(|e| Fin(
-                    format!("Error creating reqwest::Client: {:?}", e)
-                ))?,
+                .map_err(|e| {
+                    Fin(format!(
+                        "Error creating reqwest::Client: {:?}",
+                        e
+                    ))
+                })?,
             None => reqwest::Client::new(),
         },
     );
@@ -100,6 +103,13 @@ fn main() -> Result<(), Fin> {
     let message = match message {
         Some(val) => val,
         None => {
+            let token_re =
+                regex::Regex::new("^[0-9]+:[a-zA-Z0-9_-]+$").unwrap();
+            if !token_re.is_match(token) {
+                return Err(Fin(
+                    "Token doesn't match regexp".to_owned()
+                ));
+            }
             eprintln!("Config is fine. Exiting.");
             return Ok(());
         }

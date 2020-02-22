@@ -80,11 +80,12 @@ fn main() -> Result<(), Fin> {
     } = toml::from_str(&config_raw)
         .map_err(|e| Fin(format!("Error parsing config: {:?}", e)))?;
 
+    dbg!(&proxy);
     let bot = Bot::with_client(
         token,
         match proxy {
             Some(proxy) => reqwest::Client::builder()
-                .proxy(reqwest::Proxy::all(proxy).unwrap())
+                .proxy(reqwest::Proxy::https(proxy).unwrap())
                 .build()
                 .unwrap(),
             None => reqwest::Client::new(),
@@ -99,6 +100,7 @@ fn main() -> Result<(), Fin> {
         }
     };
 
+    teloxide::enable_logging!();
     tokio::runtime::Runtime::new()
         .expect("Create runtime")
         .block_on(async move {

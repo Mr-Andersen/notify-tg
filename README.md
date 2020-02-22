@@ -4,6 +4,8 @@
   - Create bot with [@BotFather](https://t.me/BotFather). Put token in the config
   - Write something to your bot (`/start`), so it can answer back later
   - Find out your `chat_id` (you can do that with [@showjsonbot](https://t.me/showjsonbot) for example)
+  - Put this `id` into config
+  - Optionally, set/remove proxy
   - Do `cargo install --git https://github.com/Mr-Andersen/notify-tg && notify-tg "notify-tg has been successfully installed!"`
   - When installation finishes, bot will send a message to you. Now when you do `notify-tg "Message"`, bot sends to you "Message"
 # Lib

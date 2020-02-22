@@ -1,5 +1,3 @@
-#![feature(termination_trait_lib)]
-
 use std::{fs::File, io::Read};
 
 use clap::{App, Arg};
@@ -27,7 +25,7 @@ impl std::fmt::Debug for Fin {
 
 fn main() -> Result<(), Fin> {
     let args = App::new("notify-tg")
-        .version("0.1.0")
+        .version("1.0.0")
         .arg(
             Arg::with_name("cfg_path")
                 .short("c")
@@ -80,7 +78,6 @@ fn main() -> Result<(), Fin> {
     } = toml::from_str(&config_raw)
         .map_err(|e| Fin(format!("Error parsing config: {:?}", e)))?;
 
-    dbg!(&proxy);
     let bot = Bot::with_client(
         token,
         match proxy {

@@ -12,6 +12,7 @@ struct Config<'a> {
     master_chat_id: teloxide::types::ChatId,
 }
 
+// Just a wrapper for returning Strings as errors from main
 struct Fin(String);
 
 impl std::fmt::Debug for Fin {
@@ -82,9 +83,16 @@ fn main() -> Result<(), Fin> {
         token,
         match proxy {
             Some(proxy) => reqwest::Client::builder()
-                .proxy(reqwest::Proxy::https(proxy).unwrap())
+                .proxy(
+                    reqwest::Proxy::https(proxy)
+                        .map_err(|e| Fin(
+                            format!("Error creating reqwest::Proxy: {:?}", e)
+                        ))?
+                )
                 .build()
-                .unwrap(),
+                .map_err(|e| Fin(
+                    format!("Error creating reqwest::Client: {:?}", e)
+                ))?,
             None => reqwest::Client::new(),
         },
     );

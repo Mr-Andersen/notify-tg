@@ -16,10 +16,7 @@ struct Config<'a> {
 struct Fin(String);
 
 impl std::fmt::Debug for Fin {
-    fn fmt(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.0)
     }
 }
@@ -63,9 +60,8 @@ fn main() -> Result<(), Fin> {
     )?;
     let message = args.value_of("message");
 
-    let mut config_file = File::open(&config_path).map_err(|e| {
-        Fin(format!("Can't open config ({:?}): {:?}", config_path, e))
-    })?;
+    let mut config_file = File::open(&config_path)
+        .map_err(|e| Fin(format!("Can't open config ({:?}): {:?}", config_path, e)))?;
 
     let mut config_raw = String::new();
     config_file
@@ -76,26 +72,18 @@ fn main() -> Result<(), Fin> {
         token,
         proxy,
         master_chat_id,
-    } = toml::from_str(&config_raw)
-        .map_err(|e| Fin(format!("Error parsing config: {:?}", e)))?;
+    } = toml::from_str(&config_raw).map_err(|e| Fin(format!("Error parsing config: {:?}", e)))?;
 
     let bot = Bot::with_client(
         token,
         match proxy {
             Some(proxy) => reqwest::Client::builder()
-                .proxy(reqwest::Proxy::https(proxy).map_err(|e| {
-                    Fin(format!(
-                        "Error creating reqwest::Proxy: {:?}",
-                        e
-                    ))
-                })?)
+                .proxy(
+                    reqwest::Proxy::https(proxy)
+                        .map_err(|e| Fin(format!("Error creating reqwest::Proxy: {:?}", e)))?,
+                )
                 .build()
-                .map_err(|e| {
-                    Fin(format!(
-                        "Error creating reqwest::Client: {:?}",
-                        e
-                    ))
-                })?,
+                .map_err(|e| Fin(format!("Error creating reqwest::Client: {:?}", e)))?,
             None => reqwest::Client::new(),
         },
     );
@@ -103,12 +91,9 @@ fn main() -> Result<(), Fin> {
     let message = match message {
         Some(val) => val,
         None => {
-            let token_re =
-                regex::Regex::new("^[0-9]+:[a-zA-Z0-9_-]+$").unwrap();
+            let token_re = regex::Regex::new("^[0-9]+:[a-zA-Z0-9_-]+$").unwrap();
             if !token_re.is_match(token) {
-                return Err(Fin(
-                    "Token doesn't match regexp".to_owned()
-                ));
+                return Err(Fin("Token doesn't match regexp".to_owned()));
             }
             eprintln!("Config is fine. Exiting.");
             return Ok(());

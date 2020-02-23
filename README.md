@@ -8,7 +8,7 @@
   - You can set `prefix` -- this line will be prepended to all your messages
   - Optionally, set/remove proxy
   - Do `cargo install --git https://github.com/Mr-Andersen/notify-tg && notify-tg "notify-tg has been successfully installed!"`
-  - When installation finishes, bot will send a message to you. Now when you do `notify-tg "Message"`, bot sends to you "Message"
+  - When installation finishes, bot will send a message to you. Now when you can send message to yourself with `notify-tg "Message"`
 # Lib
 https://github.com/teloxide/teloxide
 # Comment

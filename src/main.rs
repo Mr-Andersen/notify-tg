@@ -41,7 +41,7 @@ fn main() -> Result<(), Fin> {
         )
         .arg(
             Arg::with_name("message")
-                .help("message to send; if omitted, validate config and exit")
+                .help("message to send; if omitted, send `getMe` to Telegram server and exit")
                 .index(1)
                 .takes_value(true),
         )
@@ -90,30 +90,34 @@ fn main() -> Result<(), Fin> {
         },
     );
 
+    pretty_env_logger::init();
+    let mut rt = tokio::runtime::Runtime::new().expect("Create runtime");
     let message = match message {
         Some(val) => prefix.map_or_else(|| String::with_capacity(val.len()), str::to_owned) + val,
         None => {
-            eprintln!("Successfully created reqwest::Client");
-            let token_re = regex::Regex::new("^[0-9]+:[a-zA-Z0-9_-]+$").unwrap();
-            if !token_re.is_match(token) {
-                return Err(Fin("Token doesn't match regexp".to_owned()));
-            }
-            eprintln!("Checked if token matches (weak) regular expression");
-            eprintln!("Config is fine. Exiting.");
-            return Ok(());
+            return rt.block_on(async move {
+                match bot.get_me().send().await {
+                    Ok(me) => {
+                        log::info!("getMe -> {:?}", me);
+                        log::info!("Config is fine. Exiting.");
+                        Ok(())
+                    },
+                    Err(e) => {
+                        log::error!("{}", e);
+                        return Err(Fin(e.to_string()));
+                    }
+                }
+            });
         }
     };
 
-    teloxide::enable_logging!();
-    tokio::runtime::Runtime::new()
-        .expect("Create runtime")
-        .block_on(async move {
-            bot.send_message(master_chat_id, message)
-                .send()
-                .await
-                .log_on_error()
-                .await
-        });
+    rt.block_on(async move {
+        bot.send_message(master_chat_id, message)
+            .send()
+            .await
+            .log_on_error()
+            .await
+    });
 
     Ok(())
 }

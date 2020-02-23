@@ -1,3 +1,4 @@
 token = "1234567890:AAAAA"
 proxy = "socks5://127.0.0.1:9050"
+prefix = "vps: "
 master_chat_id = 198765432

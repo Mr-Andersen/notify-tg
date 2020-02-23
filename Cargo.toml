@@ -1,6 +1,6 @@
 [package]
 name = "notify-tg"
-version = "1.0.0"
+version = "1.1.0"
 authors = ["Mr-Andersen <andrew-anderson.neo@yandex.ru>"]
 edition = "2018"
 
@@ -17,3 +17,7 @@ serde = { version = "1.0", features = [ "derive" ] }
 teloxide = "0.1"
 toml = "0.5"
 tokio = "0.2"
+
+[profile.release]
+lto = 'fat'
+codegen-units = 1

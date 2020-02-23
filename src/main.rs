@@ -10,6 +10,7 @@ struct Config<'a> {
     token: &'a str,
     proxy: Option<&'a str>,
     master_chat_id: teloxide::types::ChatId,
+    prefix: Option<&'a str>,
 }
 
 // Just a wrapper for returning Strings as errors from main
@@ -23,7 +24,7 @@ impl std::fmt::Debug for Fin {
 
 fn main() -> Result<(), Fin> {
     let args = App::new("notify-tg")
-        .version("1.0.0")
+        .version("1.1.0")
         .arg(
             Arg::with_name("cfg_path")
                 .short("c")
@@ -72,6 +73,7 @@ fn main() -> Result<(), Fin> {
         token,
         proxy,
         master_chat_id,
+        prefix,
     } = toml::from_str(&config_raw).map_err(|e| Fin(format!("Error parsing config: {:?}", e)))?;
 
     let bot = Bot::with_client(
@@ -89,12 +91,14 @@ fn main() -> Result<(), Fin> {
     );
 
     let message = match message {
-        Some(val) => val,
+        Some(val) => prefix.map_or_else(|| String::with_capacity(val.len()), str::to_owned) + val,
         None => {
+            eprintln!("Successfully created reqwest::Client");
             let token_re = regex::Regex::new("^[0-9]+:[a-zA-Z0-9_-]+$").unwrap();
             if !token_re.is_match(token) {
                 return Err(Fin("Token doesn't match regexp".to_owned()));
             }
+            eprintln!("Checked if token matches (weak) regular expression");
             eprintln!("Config is fine. Exiting.");
             return Ok(());
         }

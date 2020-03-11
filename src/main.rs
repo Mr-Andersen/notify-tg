@@ -1,9 +1,9 @@
 use std::{fs::File, io::Read};
 
-use clap::{App, Arg};
+use structopt::StructOpt;
 use dirs::config_dir;
 use serde::Deserialize;
-use teloxide::prelude::*;
+use teloxide::{prelude::*, types::ParseMode};
 
 #[derive(Deserialize)]
 struct Config<'a> {
@@ -11,6 +11,14 @@ struct Config<'a> {
     proxy: Option<&'a str>,
     master_chat_id: teloxide::types::ChatId,
     prefix: Option<&'a str>,
+}
+
+#[derive(StructOpt)]
+struct Args {
+    #[structopt(short, long, name = "PATH")]
+    cfg_path: Option<String>,
+    #[structopt(name = "MSG")]
+    message: Option<String>
 }
 
 // Just a wrapper for returning Strings as errors from main
@@ -23,31 +31,9 @@ impl std::fmt::Debug for Fin {
 }
 
 fn main() -> Result<(), Fin> {
-    let args = App::new("notify-tg")
-        .version("1.1.0")
-        .arg(
-            Arg::with_name("cfg_path")
-                .short("c")
-                .long("cfg_path")
-                .value_name("PATH")
-                .help(&format!(
-                    "provide path to config file (defaults to {})",
-                    config_dir().map_or("(unavailable)".to_owned(), |pb| pb
-                        .to_string_lossy()
-                        .to_string()
-                        + "/notify-tg.toml")
-                ))
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("message")
-                .help("message to send; if omitted, send `getMe` to Telegram server and exit")
-                .index(1)
-                .takes_value(true),
-        )
-        .get_matches();
+    let args = Args::from_args();
 
-    let config_path = args.value_of("cfg_path").map_or(
+    let config_path = args.cfg_path.map_or(
         config_dir().map_or(
             Err(Fin(
                 "Can't obtain config directory. Specify path to config file with '-c'".to_owned(),
@@ -59,7 +45,7 @@ fn main() -> Result<(), Fin> {
         ),
         |s| Ok(std::path::PathBuf::from(s)),
     )?;
-    let message = args.value_of("message");
+    let message = args.message;
 
     let mut config_file = File::open(&config_path)
         .map_err(|e| Fin(format!("Can't open config ({:?}): {:?}", config_path, e)))?;
@@ -93,7 +79,7 @@ fn main() -> Result<(), Fin> {
     pretty_env_logger::init();
     let mut rt = tokio::runtime::Runtime::new().expect("Create runtime");
     let message = match message {
-        Some(val) => prefix.map_or_else(|| String::with_capacity(val.len()), str::to_owned) + val,
+        Some(val) => prefix.map_or_else(|| String::with_capacity(val.len()), str::to_owned) + &val,
         None => {
             return rt.block_on(async move {
                 match bot.get_me().send().await {
@@ -113,6 +99,7 @@ fn main() -> Result<(), Fin> {
 
     rt.block_on(async move {
         bot.send_message(master_chat_id, message)
+            .parse_mode(ParseMode::HTML)
             .send()
             .await
             .log_on_error()

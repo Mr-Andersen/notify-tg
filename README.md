@@ -12,4 +12,4 @@
 # Lib
 https://github.com/teloxide/teloxide
 # Comment
-Yet, compilation time is quite high. I hope to reduce it at some point, by using only part of `teloxide` (like, its core) and probably something lighter than `clap` for CLI
+Yet, compilation time is quite high. I hope to reduce it at some point, by using only part of `teloxide` (like, its core) and probably something lighter than `structopt` for CLI

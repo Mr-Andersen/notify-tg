@@ -3,7 +3,7 @@ use std::{fs::File, io::Read};
 use structopt::StructOpt;
 use dirs::config_dir;
 use serde::Deserialize;
-use teloxide::{prelude::*, types::ParseMode};
+use teloxide::{prelude::*, types::{ParseMode, InputFile}};
 
 #[derive(Deserialize)]
 struct Config<'a> {
@@ -18,7 +18,9 @@ struct Args {
     #[structopt(short, long, name = "PATH")]
     cfg_path: Option<String>,
     #[structopt(name = "MSG")]
-    message: Option<String>
+    message: Option<String>,
+    #[structopt(short, long, name = "FILE")]
+    include: Option<String>
 }
 
 // Just a wrapper for returning Strings as errors from main
@@ -31,9 +33,11 @@ impl std::fmt::Debug for Fin {
 }
 
 fn main() -> Result<(), Fin> {
-    let args = Args::from_args();
+    pretty_env_logger::init();
 
-    let config_path = args.cfg_path.map_or(
+    let Args { cfg_path, message, include } = Args::from_args();
+
+    let cfg_path = cfg_path.map_or(
         config_dir().map_or(
             Err(Fin(
                 "Can't obtain config directory. Specify path to config file with '-c'".to_owned(),
@@ -45,10 +49,9 @@ fn main() -> Result<(), Fin> {
         ),
         |s| Ok(std::path::PathBuf::from(s)),
     )?;
-    let message = args.message;
 
-    let mut config_file = File::open(&config_path)
-        .map_err(|e| Fin(format!("Can't open config ({:?}): {:?}", config_path, e)))?;
+    let mut config_file = File::open(&cfg_path)
+        .map_err(|e| Fin(format!("Can't open config ({:?}): {:?}", cfg_path, e)))?;
 
     let mut config_raw = String::new();
     config_file
@@ -76,7 +79,6 @@ fn main() -> Result<(), Fin> {
         },
     );
 
-    pretty_env_logger::init();
     let mut rt = tokio::runtime::Runtime::new().expect("Create runtime");
     let message = match message {
         Some(val) => prefix.map_or_else(|| String::with_capacity(val.len()), str::to_owned) + &val,
@@ -98,12 +100,24 @@ fn main() -> Result<(), Fin> {
     };
 
     rt.block_on(async move {
-        bot.send_message(master_chat_id, message)
-            .parse_mode(ParseMode::HTML)
-            .send()
-            .await
-            .log_on_error()
-            .await
+        match include {
+            None => bot.send_message(master_chat_id, message)
+                .parse_mode(ParseMode::HTML)
+                .send()
+                .await
+                .log_on_error()
+                .await,
+            Some(filename) => bot.send_document(
+                    master_chat_id,
+                    InputFile::File(filename.into())
+                )
+                .caption(message)
+                .parse_mode(ParseMode::HTML)
+                .send()
+                .await
+                .log_on_error()
+                .await
+            }
     });
 
     Ok(())

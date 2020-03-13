@@ -3,11 +3,10 @@
 # Why?
 I often run heavy computations that take some time -- usually couple of hours. I want to know when computation finishes as soon as possible. And I also use Telegram on daily basis. That's why I've created `notify-tg`:
   - `./long-running-something && notify-tg 'Calculation successfull' || notify-tg 'Calculation failed'` -- receive notification about calculation status
-  - from python:
+  - from python -- same as previous, but include constants in message:
   ```Python3
   subprocess.run(['notify-tg', 'calc finished for <pre>' + constants_prettified + '</pre>'])
   ```
-  same as previous, but include constants in message
 
 # Installation
   - Create file `notify-tg.toml` in your "config" directory (on Linux: `$HOME/.config/`), copy-paste contents of `example-config.toml` there

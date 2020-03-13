@@ -33,7 +33,7 @@ impl std::fmt::Debug for Fin {
 }
 
 fn main() -> Result<(), Fin> {
-    pretty_env_logger::init();
+    env_logger::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     let Args { cfg_path, message, include } = Args::from_args();
 
@@ -86,7 +86,10 @@ fn main() -> Result<(), Fin> {
             return rt.block_on(async move {
                 match bot.get_me().send().await {
                     Ok(me) => {
-                        log::info!("getMe -> {:?}", me);
+                        log::info!("getMe -> {:#?}", me);
+                        if let Some(_) = include {
+                            log::warn!("`-i` flag received, but no message provided");
+                        }
                         log::info!("Config is fine. Exiting.");
                         Ok(())
                     },

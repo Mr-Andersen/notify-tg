@@ -1,6 +1,6 @@
 [package]
 name = "notify-tg"
-version = "1.2.0"
+version = "1.3.0"
 authors = ["Mr-Andersen <andrew-anderson.neo@yandex.ru>"]
 edition = "2018"
 

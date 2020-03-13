@@ -1,9 +1,12 @@
 use std::{fs::File, io::Read};
 
-use structopt::StructOpt;
 use dirs::config_dir;
 use serde::Deserialize;
-use teloxide::{prelude::*, types::{ParseMode, InputFile}};
+use structopt::StructOpt;
+use teloxide::{
+    prelude::*,
+    types::{InputFile, ParseMode},
+};
 
 #[derive(Deserialize)]
 struct Config<'a> {
@@ -20,7 +23,7 @@ struct Args {
     #[structopt(name = "MSG")]
     message: Option<String>,
     #[structopt(short, long, name = "FILE")]
-    include: Option<String>
+    include: Option<String>,
 }
 
 // Just a wrapper for returning Strings as errors from main
@@ -35,7 +38,11 @@ impl std::fmt::Debug for Fin {
 fn main() -> Result<(), Fin> {
     env_logger::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
-    let Args { cfg_path, message, include } = Args::from_args();
+    let Args {
+        cfg_path,
+        message,
+        include,
+    } = Args::from_args();
 
     let cfg_path = cfg_path.map_or(
         config_dir().map_or(
@@ -92,7 +99,7 @@ fn main() -> Result<(), Fin> {
                         }
                         log::info!("Config is fine. Exiting.");
                         Ok(())
-                    },
+                    }
                     Err(e) => {
                         log::error!("{}", e);
                         return Err(Fin(e.to_string()));
@@ -104,23 +111,24 @@ fn main() -> Result<(), Fin> {
 
     rt.block_on(async move {
         match include {
-            None => bot.send_message(master_chat_id, message)
-                .parse_mode(ParseMode::HTML)
-                .send()
-                .await
-                .log_on_error()
-                .await,
-            Some(filename) => bot.send_document(
-                    master_chat_id,
-                    InputFile::File(filename.into())
-                )
-                .caption(message)
-                .parse_mode(ParseMode::HTML)
-                .send()
-                .await
-                .log_on_error()
-                .await
+            None => {
+                bot.send_message(master_chat_id, message)
+                    .parse_mode(ParseMode::HTML)
+                    .send()
+                    .await
+                    .log_on_error()
+                    .await
             }
+            Some(filename) => {
+                bot.send_document(master_chat_id, InputFile::File(filename.into()))
+                    .caption(message)
+                    .parse_mode(ParseMode::HTML)
+                    .send()
+                    .await
+                    .log_on_error()
+                    .await
+            }
+        }
     });
 
     Ok(())

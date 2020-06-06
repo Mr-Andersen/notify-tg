@@ -21,7 +21,7 @@ I often run heavy computations that take some time — usually couple of hours. 
 
 # Features
   - Validate your config and connection to Telegram servers with running `notify-tg` without arguments. On success it will show you `getMe` response — basic info about your bot, such as its `@username`.
-  - `-i|--include [FILE]` flag for sending file captioned with `MSG`
+  - `-i|--include <FILE>` flag for sending file captioned with `MSG`
   - Messages are html
 
 # Lib

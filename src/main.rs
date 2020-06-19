@@ -86,50 +86,53 @@ fn main() -> Result<(), Fin> {
         },
     );
 
-    let mut rt = tokio::runtime::Runtime::new().expect("Create runtime");
-    let message = match message {
-        Some(val) => prefix.map_or_else(|| String::with_capacity(val.len()), str::to_owned) + &val,
-        None => {
-            return rt.block_on(async move {
-                match bot.get_me().send().await {
+    let mut rt = tokio::runtime::Runtime::new().expect("create runtime");
+    rt.block_on(async move {
+        let act = match (message, include) {
+            (Some(message), Some(include)) => {
+                let message = prefix
+                    .map_or_else(|| String::with_capacity(message.len()), str::to_owned)
+                    + &message;
+                bot.send_document(master_chat_id, InputFile::File(include.into()))
+                    .caption(message)
+                    .parse_mode(ParseMode::HTML)
+                    .send()
+                    .await
+            }
+            (Some(message), None) => {
+                let message = prefix
+                    .map_or_else(|| String::with_capacity(message.len()), str::to_owned)
+                    + &message;
+                bot.send_message(master_chat_id, message)
+                    .parse_mode(ParseMode::HTML)
+                    .send()
+                    .await
+            }
+            (None, Some(include)) => {
+                let res = bot.send_document(master_chat_id, InputFile::File(include.into()));
+                match prefix {
+                    Some(prefix) => res.caption(prefix),
+                    None => res,
+                }
+                .parse_mode(ParseMode::HTML)
+                .send()
+                .await
+            }
+            (None, None) => {
+                return match bot.get_me().send().await {
                     Ok(me) => {
                         log::info!("getMe -> {:#?}", me);
-                        if let Some(_) = include {
-                            log::warn!("`-i` flag received, but no message provided");
-                        }
                         log::info!("Config is fine. Exiting.");
                         Ok(())
                     }
                     Err(e) => {
                         log::error!("{}", e);
-                        return Err(Fin(e.to_string()));
+                        Err(Fin(e.to_string()))
                     }
-                }
-            });
-        }
-    };
-
-    rt.block_on(async move {
-        match include {
-            None => {
-                bot.send_message(master_chat_id, message)
-                    .parse_mode(ParseMode::HTML)
-                    .send()
-                    .await
-                    .log_on_error()
-                    .await
+                };
             }
-            Some(filename) => {
-                bot.send_document(master_chat_id, InputFile::File(filename.into()))
-                    .caption(message)
-                    .parse_mode(ParseMode::HTML)
-                    .send()
-                    .await
-                    .log_on_error()
-                    .await
-            }
-        }
-    });
-
-    Ok(())
+        };
+        act.log_on_error().await;
+        Ok(())
+    })
 }

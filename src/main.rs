@@ -3,16 +3,17 @@ use std::{fs::File, io::Read};
 use dirs::config_dir;
 use serde::Deserialize;
 use structopt::StructOpt;
-use teloxide::{
-    prelude::*,
-    types::{InputFile, ParseMode},
+use teloxide_core::{
+    requests::Request,
+    types::{ChatId, InputFile, ParseMode},
+    BotBuilder,
 };
 
 #[derive(Deserialize)]
 struct Config<'a> {
     token: &'a str,
     proxy: Option<&'a str>,
-    master_chat_id: teloxide::types::ChatId,
+    master_chat_id: ChatId,
     prefix: Option<&'a str>,
 }
 
@@ -58,33 +59,34 @@ fn main() -> Result<(), Fin> {
     )?;
 
     let mut config_file = File::open(&cfg_path)
-        .map_err(|e| Fin(format!("Can't open config ({:?}): {:?}", cfg_path, e)))?;
+        .map_err(|err| Fin(format!("Can't open config ({:?}): {:?}", cfg_path, err)))?;
 
     let mut config_raw = String::new();
     config_file
         .read_to_string(&mut config_raw)
-        .map_err(|e| Fin(format!("Can't read config: {:?}", e)))?;
+        .map_err(|err| Fin(format!("Can't read config: {:?}", err)))?;
 
     let Config {
         token,
         proxy,
         master_chat_id,
         prefix,
-    } = toml::from_str(&config_raw).map_err(|e| Fin(format!("Error parsing config: {:?}", e)))?;
+    } = toml::from_str(&config_raw)
+        .map_err(|err| Fin(format!("Error parsing config: {:?}", err)))?;
 
-    let bot = Bot::with_client(
-        token,
-        match proxy {
+    let bot = BotBuilder::new()
+        .token(token)
+        .client(match proxy {
             Some(proxy) => reqwest::Client::builder()
                 .proxy(
                     reqwest::Proxy::https(proxy)
-                        .map_err(|e| Fin(format!("Error creating reqwest::Proxy: {:?}", e)))?,
+                        .map_err(|err| Fin(format!("Error creating reqwest::Proxy: {:?}", err)))?,
                 )
                 .build()
-                .map_err(|e| Fin(format!("Error creating reqwest::Client: {:?}", e)))?,
+                .map_err(|err| Fin(format!("Error creating reqwest::Client: {:?}", err)))?,
             None => reqwest::Client::new(),
-        },
-    );
+        })
+        .build();
 
     let mut rt = tokio::runtime::Runtime::new().expect("create runtime");
     rt.block_on(async move {
@@ -132,7 +134,9 @@ fn main() -> Result<(), Fin> {
                 };
             }
         };
-        act.log_on_error().await;
+        if let Err(err) = act {
+            log::error!("{}", err);
+        }
         Ok(())
     })
 }

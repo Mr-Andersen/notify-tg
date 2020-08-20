@@ -2,7 +2,6 @@ use std::{fs::File, io::Read};
 
 use dirs::config_dir;
 use serde::Deserialize;
-use structopt::StructOpt;
 use teloxide_core::{
     requests::Request,
     types::{ChatId, InputFile, ParseMode},
@@ -17,14 +16,18 @@ struct Config<'a> {
     prefix: Option<&'a str>,
 }
 
-#[derive(StructOpt)]
+#[derive(argh::FromArgs)]
+/// Send message to yourself in Telegram
 struct Args {
-    #[structopt(short, long, name = "PATH")]
+    #[argh(option, short = 'c')]
+    /// alternative path to config. Default is $sys_config_dir/notify-tg.toml
     cfg_path: Option<String>,
-    #[structopt(name = "MSG")]
-    message: Option<String>,
-    #[structopt(short, long, name = "FILE")]
+    /// file to send
+    #[argh(option, short = 'i')]
     include: Option<String>,
+    /// text message to send
+    #[argh(positional)]
+    message: Option<String>,
 }
 
 // Just a wrapper for returning Strings as errors from main
@@ -43,7 +46,7 @@ fn main() -> Result<(), Fin> {
         cfg_path,
         message,
         include,
-    } = Args::from_args();
+    } = argh::from_env();
 
     let cfg_path = cfg_path.map_or(
         config_dir().map_or(

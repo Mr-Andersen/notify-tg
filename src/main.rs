@@ -3,7 +3,7 @@ use std::{fs::File, io::Read};
 use dirs::config_dir;
 use serde::Deserialize;
 use teloxide_core::{
-    requests::Request,
+    requests::RequestOld,
     types::{ChatId, InputFile, ParseMode},
     BotBuilder,
 };

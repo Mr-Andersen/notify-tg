@@ -8,6 +8,9 @@ I often run heavy computations that take some time — usually couple of hours. 
   subprocess.run(['notify-tg', 'calc finished for <pre>' + constants_prettified + '</pre>'])
   ```
 
+## Another usecase
+`ExecStopPost=notify-tg 'Service "beautiful-service-name" failed!'` in [unit file](https://www.freedesktop.org/software/systemd/man/systemd.service.html)
+
 # Installation
   - Create file `notify-tg.toml` in your "config" directory (on Linux: `$HOME/.config/`), copy-paste contents of `example-config.toml` there
   - Create bot with [@BotFather](https://t.me/BotFather). Put token in the config

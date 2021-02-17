@@ -1,4 +1,4 @@
-use std::{fs::File, io::Read};
+use std::{fs::File, io::Read, path::PathBuf};
 
 use dirs::config_dir;
 use serde::Deserialize;
@@ -17,12 +17,19 @@ struct Config<'a> {
     prefix: Option<&'a str>,
 }
 
+fn default_cfg_path() -> PathBuf {
+    let mut dir = config_dir()
+        .expect("Error obtaining config directory. Specify path to config file with '-c'");
+    dir.push("notify-tg.toml");
+    dir
+}
+
 #[derive(argh::FromArgs)]
 /// Send message to yourself in Telegram
 struct Args {
-    #[argh(option, short = 'c')]
+    #[argh(option, short = 'c', default = "default_cfg_path()")]
     /// alternative path to config. Default is $sys_config_dir/notify-tg.toml
-    cfg_path: Option<String>,
+    cfg_path: PathBuf,
     /// file to send
     #[argh(option, short = 'i')]
     include: Option<String>,
@@ -31,16 +38,7 @@ struct Args {
     message: Option<String>,
 }
 
-// Just a wrapper for returning Strings as errors from main
-struct Fin(String);
-
-impl std::fmt::Debug for Fin {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.0)
-    }
-}
-
-fn main() -> Result<(), Fin> {
+fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     let Args {
@@ -49,34 +47,20 @@ fn main() -> Result<(), Fin> {
         include,
     } = argh::from_env();
 
-    let cfg_path = cfg_path.map_or(
-        config_dir().map_or(
-            Err(Fin(
-                "Can't obtain config directory. Specify path to config file with '-c'".to_owned(),
-            )),
-            |mut dir| {
-                dir.push("notify-tg.toml");
-                Ok(dir)
-            },
-        ),
-        |s| Ok(std::path::PathBuf::from(s)),
-    )?;
-
     let mut config_file = File::open(&cfg_path)
-        .map_err(|err| Fin(format!("Can't open config ({:?}): {:?}", cfg_path, err)))?;
+        .unwrap_or_else(|err| panic!("Error opening config {:?}: {:?}", cfg_path, err));
 
     let mut config_raw = String::new();
     config_file
         .read_to_string(&mut config_raw)
-        .map_err(|err| Fin(format!("Can't read config: {:?}", err)))?;
+        .unwrap_or_else(|err| panic!("Error reading config: {:?}", err));
 
     let Config {
         token,
         proxy,
         master_chat_id,
         prefix,
-    } = toml::from_str(&config_raw)
-        .map_err(|err| Fin(format!("Error parsing config: {:?}", err)))?;
+    } = toml::from_str(&config_raw).unwrap_or_else(|err| panic!("Error parsing config: {:?}", err));
 
     let bot = Bot::with_client(
         token,
@@ -84,20 +68,21 @@ fn main() -> Result<(), Fin> {
             Some(proxy) => reqwest::Client::builder()
                 .proxy(
                     reqwest::Proxy::https(proxy)
-                        .map_err(|err| Fin(format!("Error creating reqwest::Proxy: {:?}", err)))?,
+                        .unwrap_or_else(|err| panic!("Error creating reqwest::Proxy: {:?}", err)),
                 )
                 .build()
-                .map_err(|err| Fin(format!("Error creating reqwest::Client: {:?}", err)))?,
+                .unwrap_or_else(|err| panic!("Error creating reqwest::Client: {:?}", err)),
             None => reqwest::Client::new(),
         },
     );
 
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_io()
+        .enable_time()
         .build()
-        .expect("create runtime");
-    rt.block_on(async move {
-        let act = match (message, include) {
+        .expect("Error building tokio::runtime::Runtime");
+    let res = rt.block_on(async move {
+        match (message, include) {
             (Some(message), Some(include)) => {
                 let message = prefix
                     .map_or_else(|| String::with_capacity(message.len()), str::to_owned)
@@ -107,6 +92,7 @@ fn main() -> Result<(), Fin> {
                     .parse_mode(ParseMode::Html)
                     .send()
                     .await
+                    .map(drop)
             }
             (Some(message), None) => {
                 let message = prefix
@@ -116,6 +102,7 @@ fn main() -> Result<(), Fin> {
                     .parse_mode(ParseMode::Html)
                     .send()
                     .await
+                    .map(drop)
             }
             (None, Some(include)) => {
                 let res = bot.send_document(master_chat_id, InputFile::File(include.into()));
@@ -126,24 +113,16 @@ fn main() -> Result<(), Fin> {
                 .parse_mode(ParseMode::Html)
                 .send()
                 .await
+                .map(drop)
             }
-            (None, None) => {
-                return match bot.get_me().send().await {
-                    Ok(me) => {
-                        log::info!("getMe -> {:#?}", me);
-                        log::info!("Config is fine. Exiting.");
-                        Ok(())
-                    }
-                    Err(e) => {
-                        log::error!("{}", e);
-                        Err(Fin(e.to_string()))
-                    }
-                };
-            }
-        };
-        if let Err(err) = act {
-            log::error!("{}", err);
+            (None, None) => bot.get_me().send().await.map(|me| {
+                log::info!("getMe -> {:#?}", me);
+                log::info!("Config is fine. Exiting.");
+                log::info!("For help use `notify-tg --help`");
+            }),
         }
-        Ok(())
-    })
+    });
+    if let Err(err) = res {
+        log::error!("{:?}", err);
+    }
 }

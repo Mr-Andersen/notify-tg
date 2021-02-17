@@ -1,7 +1,7 @@
 [package]
 name = "notify-tg"
-version = "1.4.2"
-authors = ["Mr-Andersen <andrew-anderson.neo@yandex.ru>"]
+version = "1.4.3"
+authors = ["Mr-Andersen <andrassy_anderson@protonmail.com>"]
 edition = "2018"
 
 [features]
@@ -20,4 +20,4 @@ toml = "0.5"
 
 [dependencies.tokio]
 version = "1.0"
-features = ["net", "rt"]
+features = ["net", "rt", "time"]

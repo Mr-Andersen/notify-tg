@@ -27,6 +27,3 @@ I often run heavy computations that take some time — usually couple of hours. 
   - `-i|--include <FILE>` flag for sending file captioned with `MSG`
   - Messages are html
   - Literally, a feature: if you need your bot to support SOCKS proxy, compile it with corresponding feature
-
-# In case it doesn't compile
-That's probably because of `teloxide-core`, its API is still changing. Create an issue (or PR)

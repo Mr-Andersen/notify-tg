@@ -3,9 +3,10 @@ use std::{fs::File, io::Read};
 use dirs::config_dir;
 use serde::Deserialize;
 use teloxide_core::{
-    requests::RequestOld,
+    payloads::setters::*,
+    requests::{Request, Requester},
     types::{ChatId, InputFile, ParseMode},
-    BotBuilder,
+    Bot,
 };
 
 #[derive(Deserialize)]
@@ -40,7 +41,7 @@ impl std::fmt::Debug for Fin {
 }
 
 fn main() -> Result<(), Fin> {
-    env_logger::from_env(env_logger::Env::default().default_filter_or("info")).init();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     let Args {
         cfg_path,
@@ -77,9 +78,9 @@ fn main() -> Result<(), Fin> {
     } = toml::from_str(&config_raw)
         .map_err(|err| Fin(format!("Error parsing config: {:?}", err)))?;
 
-    let bot = BotBuilder::new()
-        .token(token)
-        .client(match proxy {
+    let bot = Bot::with_client(
+        token,
+        match proxy {
             Some(proxy) => reqwest::Client::builder()
                 .proxy(
                     reqwest::Proxy::https(proxy)
@@ -88,10 +89,13 @@ fn main() -> Result<(), Fin> {
                 .build()
                 .map_err(|err| Fin(format!("Error creating reqwest::Client: {:?}", err)))?,
             None => reqwest::Client::new(),
-        })
-        .build();
+        },
+    );
 
-    let mut rt = tokio::runtime::Runtime::new().expect("create runtime");
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_io()
+        .build()
+        .expect("create runtime");
     rt.block_on(async move {
         let act = match (message, include) {
             (Some(message), Some(include)) => {
@@ -100,7 +104,7 @@ fn main() -> Result<(), Fin> {
                     + &message;
                 bot.send_document(master_chat_id, InputFile::File(include.into()))
                     .caption(message)
-                    .parse_mode(ParseMode::HTML)
+                    .parse_mode(ParseMode::Html)
                     .send()
                     .await
             }
@@ -109,7 +113,7 @@ fn main() -> Result<(), Fin> {
                     .map_or_else(|| String::with_capacity(message.len()), str::to_owned)
                     + &message;
                 bot.send_message(master_chat_id, message)
-                    .parse_mode(ParseMode::HTML)
+                    .parse_mode(ParseMode::Html)
                     .send()
                     .await
             }
@@ -119,7 +123,7 @@ fn main() -> Result<(), Fin> {
                     Some(prefix) => res.caption(prefix),
                     None => res,
                 }
-                .parse_mode(ParseMode::HTML)
+                .parse_mode(ParseMode::Html)
                 .send()
                 .await
             }

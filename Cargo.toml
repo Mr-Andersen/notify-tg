@@ -9,15 +9,22 @@ default = []
 socks = ["reqwest/socks"]
 
 [dependencies]
-argh = "0.1"
-dirs = "3.0"
-env_logger = "0.8"
-log = "0.4"
-reqwest = "0.11"
-serde = { version = "1.0", features = ["derive"] }
-teloxide-core = "0.1"
-toml = "0.5"
+argh = "0.1.7"
+dirs = "4.0.0"
+env_logger = "0.9.0"
+log = "0.4.14"
+reqwest = "0.11.8"
+toml = "0.5.8"
+
+[dependencies.serde]
+version = "1.0.133"
+features = ["derive"]
+
+[dependencies.teloxide-core]
+version = "0.3.4"
+default-features = false
 
 [dependencies.tokio]
-version = "1.0"
+version = "1.15.0"
+default-features = false
 features = ["net", "rt", "time"]

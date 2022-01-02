@@ -30,11 +30,13 @@ struct Args {
     #[argh(option, short = 'c', default = "default_cfg_path()")]
     /// alternative path to config. Default is $sys_config_dir/notify-tg.toml
     cfg_path: PathBuf,
-    /// file to send
+
     #[argh(option, short = 'i')]
+    /// file to send
     include: Option<String>,
-    /// text message to send
+
     #[argh(positional)]
+    /// text message to send
     message: Option<String>,
 }
 

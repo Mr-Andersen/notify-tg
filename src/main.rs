@@ -83,45 +83,34 @@ fn main() {
         .enable_time()
         .build()
         .expect("Error building tokio::runtime::Runtime");
+    let make_message = |mut message: String| {
+        message.insert_str(0, prefix.unwrap_or_default());
+        message
+    };
     let res = rt.block_on(async move {
-        match (message, include) {
-            (Some(message), Some(include)) => {
-                let message = prefix
-                    .map_or_else(|| String::with_capacity(message.len()), str::to_owned)
-                    + &message;
-                bot.send_document(master_chat_id, InputFile::File(include.into()))
-                    .caption(message)
-                    .parse_mode(ParseMode::Html)
-                    .send()
-                    .await
-                    .map(drop)
-            }
-            (Some(message), None) => {
-                let message = prefix
-                    .map_or_else(|| String::with_capacity(message.len()), str::to_owned)
-                    + &message;
-                bot.send_message(master_chat_id, message)
-                    .parse_mode(ParseMode::Html)
-                    .send()
-                    .await
-                    .map(drop)
-            }
-            (None, Some(include)) => {
-                let res = bot.send_document(master_chat_id, InputFile::File(include.into()));
-                match prefix {
-                    Some(prefix) => res.caption(prefix),
-                    None => res,
+        match include {
+            None => match message {
+                Some(message) => {
+                    let message = make_message(message);
+                    bot.send_message(master_chat_id, message)
+                        .parse_mode(ParseMode::Html)
+                        .send()
+                        .await
+                        .map(drop)
                 }
+                None => bot.get_me().send().await.map(|me| {
+                    log::info!("getMe -> {:#?}", me);
+                    log::info!("Config is fine. Exiting.");
+                    log::info!("For help use `notify-tg --help`");
+                }),
+            },
+            Some(include) => bot
+                .send_document(master_chat_id, InputFile::File(include.into()))
+                .caption(make_message(message.unwrap_or_default()))
                 .parse_mode(ParseMode::Html)
                 .send()
                 .await
-                .map(drop)
-            }
-            (None, None) => bot.get_me().send().await.map(|me| {
-                log::info!("getMe -> {:#?}", me);
-                log::info!("Config is fine. Exiting.");
-                log::info!("For help use `notify-tg --help`");
-            }),
+                .map(drop),
         }
     });
     if let Err(err) = res {
